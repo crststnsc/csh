@@ -1,24 +1,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <termios.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <termio.h>
 
 #define TKN_DELIM " \t\n\r"
 #define TKN_BUFF_SIZE 64
 
 
-int csh_exit(char **args) {
+int cshExit(char **args) {
     return 0;
 }
 
 
-int csh_execute(char **args) {
+int cshExecute(char **args) {
     pid_t cpid;
     int status;
 
     if (strcmp(args[0], "exit") == 0) {
-        return csh_exit(args);
+        return cshExit(args);
+    }
+    if (strcmp(args[0], "cd") == 0) {
+        chdir(args[1]);
+        return 1;
     }
 
     cpid = fork();
@@ -60,7 +66,7 @@ char** splitLine(char* line) {
                 exit(EXIT_FAILURE);
             }
         }
-        
+
         token = strtok(NULL, TKN_DELIM);
     }
     tokens[position] = NULL;
@@ -80,7 +86,7 @@ char* readLine() {
         exit(EXIT_FAILURE);
     }
 
-    while(true){
+    while(1){
         c = getchar();
         if (c == EOF || c == '\n') {
             buffer[position] = '\0';
@@ -102,17 +108,21 @@ char* readLine() {
     }
 }
 
+
 void loop() {
-    char* line;
-    char** args;
+    char *line, *cwd;
+    char **args;
+
     int status = 1;
     do {
-        printf("> ");
+        cwd = getcwd(NULL, 0);
+        printf("%s > ", cwd);
         line = readLine();
         args = splitLine(line);
-        status = csh_execute(args);
+        status = cshExecute(args);
         free(line);
         free(args);
+        free(cwd);
     } while (status);
 }
 
